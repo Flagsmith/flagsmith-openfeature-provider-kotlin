@@ -24,8 +24,8 @@ import org.mockito.kotlin.verify
 
 class FlagsmithProviderTests {
 
-    private fun flag(name: String, value: Any? = null, enabled: Boolean = true) =
-        Flag(feature = Feature(name = name), featureStateValue = value, enabled = enabled)
+    private fun flag(name: String, value: Any? = null, enabled: Boolean = true, id: Long = 0L) =
+        Flag(feature = Feature(name = name, id = id), featureStateValue = value, enabled = enabled)
 
     private fun flagsmithReturning(result: Result<List<Flag>>): Flagsmith = mock {
         on { getFeatureFlags(anyOrNull(), anyOrNull(), any(), any()) } doAnswer { invocation ->
@@ -296,6 +296,19 @@ class FlagsmithProviderTests {
     }
 
     @Test
+    fun `test_getBooleanEvaluation__enabled_state__exposes_feature_metadata`() {
+        // Given
+        val provider = initializedProvider(flag("feature", enabled = true, id = 11))
+
+        // When
+        val evaluation = provider.getBooleanEvaluation("feature", false, null)
+
+        // Then
+        assertEquals("11", evaluation.metadata.getString("feature_id"))
+        assertEquals("feature", evaluation.metadata.getString("feature_name"))
+    }
+
+    @Test
     fun `test_getBooleanEvaluation__flag_disabled__returns_false`() {
         // Given
         val provider = initializedProvider(flag("feature", enabled = false))
@@ -390,6 +403,19 @@ class FlagsmithProviderTests {
 
         // Then
         assertEquals(Reason.TARGETING_MATCH.name, evaluation.reason)
+    }
+
+    @Test
+    fun `test_getStringEvaluation__resolved_flag__exposes_feature_metadata`() {
+        // Given
+        val provider = initializedProvider(flag("feature", value = "some value", id = 23))
+
+        // When
+        val evaluation = provider.getStringEvaluation("feature", "default", null)
+
+        // Then
+        assertEquals("23", evaluation.metadata.getString("feature_id"))
+        assertEquals("feature", evaluation.metadata.getString("feature_name"))
     }
 
     @Test

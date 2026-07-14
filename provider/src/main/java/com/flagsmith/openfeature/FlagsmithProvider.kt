@@ -8,6 +8,7 @@ import com.google.gson.JsonElement
 import com.google.gson.stream.JsonReader
 import com.google.gson.stream.JsonToken
 import dev.openfeature.kotlin.sdk.EvaluationContext
+import dev.openfeature.kotlin.sdk.EvaluationMetadata
 import dev.openfeature.kotlin.sdk.FeatureProvider
 import dev.openfeature.kotlin.sdk.Hook
 import dev.openfeature.kotlin.sdk.ProviderEvaluation
@@ -70,7 +71,7 @@ class FlagsmithProvider(
     ): ProviderEvaluation<Boolean> {
         if (!useBooleanConfigValue) {
             val flag = flagFor(key)
-            return ProviderEvaluation(flag.enabled, reason = reasonFor(flag))
+            return ProviderEvaluation(flag.enabled, reason = reasonFor(flag), metadata = metadataFor(flag))
         }
         return resolve(key, "Boolean") { it as? Boolean }
     }
@@ -159,7 +160,7 @@ class FlagsmithProvider(
         }
         val value = convert(flag.featureStateValue)
             ?: throw OpenFeatureError.TypeMismatchError("Value for flag '$key' is not of type '$typeName'")
-        return ProviderEvaluation(value, reason = reasonFor(flag))
+        return ProviderEvaluation(value, reason = reasonFor(flag), metadata = metadataFor(flag))
     }
 
     private fun reasonFor(flag: Flag): String = when {
@@ -167,6 +168,13 @@ class FlagsmithProvider(
         fetchedForIdentity -> Reason.TARGETING_MATCH.name
         else -> Reason.STATIC.name
     }
+
+    // The OpenFeature Kotlin SDK metadata has no Long type; the Long feature id is kept as a string.
+    private fun metadataFor(flag: Flag): EvaluationMetadata =
+        EvaluationMetadata.builder()
+            .putString("feature_id", flag.feature.id.toString())
+            .putString("feature_name", flag.feature.name)
+            .build()
 
     private fun flagFor(key: String): Flag {
         val cached = flags ?: throw OpenFeatureError.ProviderNotReadyError()

@@ -110,6 +110,9 @@ Each successful evaluation reports a reason:
 | `TARGETING_MATCH` | The in-memory flags were fetched for an identity (a `targetingKey` was set) |
 | `STATIC`          | Environment flags were fetched (no `targetingKey`)                        |
 
+Each successful evaluation also carries string metadata identifying the Flagsmith feature:
+`feature_id` and `feature_name`.
+
 ```kotlin
 // Traits sent to Flagsmith: {"abc": "def", "foo": "bar2"}
 val context = ImmutableContext(
