@@ -20,7 +20,7 @@ val versionNumber: String by lazy {
         standardOutput = stdout
         errorOutput = ByteArrayOutputStream()
     }
-    val version = stdout.toString().trim().replace("v", "")
+    val version = stdout.toString().trim().removePrefix("v")
     return@lazy version.ifEmpty { "0.1.0" }
 }
 
