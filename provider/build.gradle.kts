@@ -100,7 +100,10 @@ tasks.withType(Test::class) {
 mavenPublishing {
     publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL)
 
-    signAllPublications()
+    // Signing key is injected only for release publishing; skip signing when absent.
+    if (project.findProperty("signingInMemoryKey")?.toString()?.isNotBlank() == true) {
+        signAllPublications()
+    }
 
     coordinates("com.flagsmith", "flagsmith-openfeature-provider-kotlin", versionNumber)
 
