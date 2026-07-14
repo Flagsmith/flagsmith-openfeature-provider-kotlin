@@ -101,10 +101,9 @@ class FlagsmithProviderIntegrationTests {
         }
 
         // Then
-        assertEquals(
-            "identity value",
-            OpenFeatureAPI.getClient().getStringValue("identity-flag", "default")
-        )
+        val details = OpenFeatureAPI.getClient().getStringDetails("identity-flag", "default")
+        assertEquals("identity value", details.value)
+        assertEquals(Reason.TARGETING_MATCH.name, details.reason)
         mockServer.verify(
             request().withMethod("GET").withPath("/identities/")
                 .withQueryStringParameter("identifier", "person")

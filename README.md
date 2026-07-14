@@ -102,6 +102,14 @@ The evaluation context maps to Flagsmith as follows:
 Attribute values must be strings, booleans, integers or doubles; any other value kind raises an
 `InvalidContextError`.
 
+Each successful evaluation reports a reason:
+
+| Reason            | Condition                                                                 |
+| ----------------- | ------------------------------------------------------------------------- |
+| `DISABLED`        | The flag is disabled and only returned because `returnValueForDisabledFlags` is enabled |
+| `TARGETING_MATCH` | The in-memory flags were fetched for an identity (a `targetingKey` was set) |
+| `STATIC`          | Environment flags were fetched (no `targetingKey`)                        |
+
 ```kotlin
 // Traits sent to Flagsmith: {"abc": "def", "foo": "bar2"}
 val context = ImmutableContext(

@@ -46,6 +46,9 @@ class FlagsmithProvider(
     @Volatile
     private var flags: Map<String, Flag>? = null
 
+    @Volatile
+    private var fetchedForIdentity: Boolean = false
+
     private val gson = Gson()
 
     override suspend fun initialize(initialContext: EvaluationContext?) {
@@ -66,7 +69,8 @@ class FlagsmithProvider(
         context: EvaluationContext?
     ): ProviderEvaluation<Boolean> {
         if (!useBooleanConfigValue) {
-            return ProviderEvaluation(flagFor(key).enabled, reason = Reason.STATIC.name)
+            val flag = flagFor(key)
+            return ProviderEvaluation(flag.enabled, reason = reasonFor(flag))
         }
         return resolve(key, "Boolean") { it as? Boolean }
     }
@@ -114,6 +118,7 @@ class FlagsmithProvider(
                 "An error occurred retrieving flags from Flagsmith: ${cause.message}"
             )
         }
+        fetchedForIdentity = identity != null
         flags = fetched.associateBy { it.feature.name }
     }
 
@@ -154,7 +159,13 @@ class FlagsmithProvider(
         }
         val value = convert(flag.featureStateValue)
             ?: throw OpenFeatureError.TypeMismatchError("Value for flag '$key' is not of type '$typeName'")
-        return ProviderEvaluation(value, reason = Reason.STATIC.name)
+        return ProviderEvaluation(value, reason = reasonFor(flag))
+    }
+
+    private fun reasonFor(flag: Flag): String = when {
+        !flag.enabled && returnValueForDisabledFlags -> Reason.DISABLED.name
+        fetchedForIdentity -> Reason.TARGETING_MATCH.name
+        else -> Reason.STATIC.name
     }
 
     private fun flagFor(key: String): Flag {

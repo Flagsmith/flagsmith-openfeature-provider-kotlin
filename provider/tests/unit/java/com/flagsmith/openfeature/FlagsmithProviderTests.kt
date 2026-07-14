@@ -4,6 +4,7 @@ import com.flagsmith.Flagsmith
 import com.flagsmith.entities.Feature
 import com.flagsmith.entities.Flag
 import com.flagsmith.entities.Trait
+import dev.openfeature.kotlin.sdk.EvaluationContext
 import dev.openfeature.kotlin.sdk.ImmutableContext
 import dev.openfeature.kotlin.sdk.ImmutableStructure
 import dev.openfeature.kotlin.sdk.Reason
@@ -35,6 +36,7 @@ class FlagsmithProviderTests {
 
     private fun initializedProvider(
         vararg flags: Flag,
+        context: EvaluationContext? = null,
         useBooleanConfigValue: Boolean = false,
         returnValueForDisabledFlags: Boolean = false
     ): FlagsmithProvider {
@@ -43,7 +45,7 @@ class FlagsmithProviderTests {
             useBooleanConfigValue = useBooleanConfigValue,
             returnValueForDisabledFlags = returnValueForDisabledFlags
         )
-        runBlocking { provider.initialize(null) }
+        runBlocking { provider.initialize(context) }
         return provider
     }
 
@@ -261,6 +263,39 @@ class FlagsmithProviderTests {
     }
 
     @Test
+    fun `test_getBooleanEvaluation__flags_fetched_for_identity__reason_is_targeting_match`() {
+        // Given
+        val provider = initializedProvider(
+            flag("feature", enabled = true),
+            context = ImmutableContext(targetingKey = "user-123")
+        )
+
+        // When
+        val evaluation = provider.getBooleanEvaluation("feature", false, null)
+
+        // Then
+        assertEquals(Reason.TARGETING_MATCH.name, evaluation.reason)
+    }
+
+    @Test
+    fun `test_onContextSet__targeting_key_removed__reason_reverts_to_static`() {
+        // Given
+        val provider = initializedProvider(
+            flag("feature", value = "some value"),
+            context = ImmutableContext(targetingKey = "user-123")
+        )
+
+        // When
+        runBlocking { provider.onContextSet(null, ImmutableContext()) }
+
+        // Then
+        assertEquals(
+            Reason.STATIC.name,
+            provider.getStringEvaluation("feature", "default", null).reason
+        )
+    }
+
+    @Test
     fun `test_getBooleanEvaluation__flag_disabled__returns_false`() {
         // Given
         val provider = initializedProvider(flag("feature", enabled = false))
@@ -326,6 +361,7 @@ class FlagsmithProviderTests {
 
         // Then
         assertEquals(true, evaluation.value)
+        assertEquals(Reason.DISABLED.name, evaluation.reason)
     }
 
     @Test
@@ -339,6 +375,21 @@ class FlagsmithProviderTests {
         // Then
         assertEquals("some value", evaluation.value)
         assertEquals(Reason.STATIC.name, evaluation.reason)
+    }
+
+    @Test
+    fun `test_getStringEvaluation__flags_fetched_for_identity__reason_is_targeting_match`() {
+        // Given
+        val provider = initializedProvider(
+            flag("feature", value = "some value"),
+            context = ImmutableContext(targetingKey = "user-123")
+        )
+
+        // When
+        val evaluation = provider.getStringEvaluation("feature", "default", null)
+
+        // Then
+        assertEquals(Reason.TARGETING_MATCH.name, evaluation.reason)
     }
 
     @Test
@@ -382,6 +433,7 @@ class FlagsmithProviderTests {
 
         // Then
         assertEquals("some value", evaluation.value)
+        assertEquals(Reason.DISABLED.name, evaluation.reason)
     }
 
     @Test
