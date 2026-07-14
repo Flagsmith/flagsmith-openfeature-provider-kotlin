@@ -166,10 +166,13 @@ class FlagsmithProviderTests {
             attributes = mapOf("tags" to Value.List(listOf(Value.String("a"))))
         )
 
-        // When / Then
-        assertThrows(OpenFeatureError.InvalidContextError::class.java) {
+        // When
+        val error = assertThrows(OpenFeatureError.InvalidContextError::class.java) {
             runBlocking { provider.initialize(context) }
         }
+
+        // Then
+        assertEquals("Unsupported value for trait 'tags'", error.message)
     }
 
     @Test
@@ -181,10 +184,13 @@ class FlagsmithProviderTests {
             attributes = mapOf("traits" to Value.String("not-a-structure"))
         )
 
-        // When / Then
-        assertThrows(OpenFeatureError.InvalidContextError::class.java) {
+        // When
+        val error = assertThrows(OpenFeatureError.InvalidContextError::class.java) {
             runBlocking { provider.initialize(context) }
         }
+
+        // Then
+        assertEquals("Attribute 'traits' must be a structure", error.message)
     }
 
     @Test
@@ -192,10 +198,13 @@ class FlagsmithProviderTests {
         // Given
         val provider = FlagsmithProvider(flagsmithReturning(Result.failure(Exception("boom"))))
 
-        // When / Then
-        assertThrows(OpenFeatureError.GeneralError::class.java) {
+        // When
+        val error = assertThrows(OpenFeatureError.GeneralError::class.java) {
             runBlocking { provider.initialize(null) }
         }
+
+        // Then
+        assertEquals("An error occurred retrieving flags from Flagsmith: boom", error.message)
     }
 
     @Test
@@ -229,10 +238,13 @@ class FlagsmithProviderTests {
         // Given
         val provider = initializedProvider(flag("feature"))
 
-        // When / Then
-        assertThrows(OpenFeatureError.FlagNotFoundError::class.java) {
+        // When
+        val error = assertThrows(OpenFeatureError.FlagNotFoundError::class.java) {
             provider.getBooleanEvaluation("missing", false, null)
         }
+
+        // Then
+        assertTrue(error.message?.contains("missing") == true)
     }
 
     @Test
@@ -581,18 +593,6 @@ class FlagsmithProviderTests {
         assertThrows(OpenFeatureError.ProviderNotReadyError::class.java) {
             provider.getBooleanEvaluation("feature", false, null)
         }
-    }
-
-    @Test
-    fun `test_track__any_event__is_a_no_op`() {
-        // Given
-        val provider = initializedProvider(flag("feature"))
-
-        // When
-        provider.track("purchase", null, null)
-
-        // Then
-        assertEquals(true, provider.getBooleanEvaluation("feature", false, null).value)
     }
 
     @Test

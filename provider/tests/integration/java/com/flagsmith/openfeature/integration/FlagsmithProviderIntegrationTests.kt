@@ -112,6 +112,22 @@ class FlagsmithProviderIntegrationTests {
     }
 
     @Test
+    fun `test_setProviderAndWait__environment_flags_server_error__reports_ready_with_no_flags`() {
+        // Given
+        mockServer.`when`(request().withPath("/flags/"))
+            .respond(response().withStatusCode(500))
+
+        // When
+        runBlocking { OpenFeatureAPI.setProviderAndWait(FlagsmithProvider(flagsmith())) }
+
+        // Then
+        assertEquals(OpenFeatureStatus.Ready, OpenFeatureAPI.getStatus())
+        val details = OpenFeatureAPI.getClient().getStringDetails("string-flag", "default")
+        assertEquals("default", details.value)
+        assertEquals(ErrorCode.FLAG_NOT_FOUND, details.errorCode)
+    }
+
+    @Test
     fun `test_setProviderAndWait__server_error__reports_error_status`() {
         // Given
         mockServer.`when`(request().withPath("/identities/"))

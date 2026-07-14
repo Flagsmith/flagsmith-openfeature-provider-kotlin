@@ -21,7 +21,7 @@ dependencies {
 }
 ```
 
-The OpenFeature Kotlin SDK requires Kotlin 2.1 or newer in the consuming project.
+Make sure your project's Kotlin version is compatible with the OpenFeature Kotlin SDK release you depend on.
 
 ## Using the Flagsmith Provider with the OpenFeature SDK
 
@@ -44,7 +44,8 @@ val provider = FlagsmithProvider(
     // enabling the useBooleanConfigValue setting.
     // Note: this relies on the value being defined as a Boolean in Flagsmith. If the value is not a
     // Boolean, an error will occur and the default value provided as part of the evaluation will be
-    // returned instead.
+    // returned instead. When enabled, boolean evaluation also honours returnValueForDisabledFlags
+    // below; when disabled, the flag's 'Enabled' state is returned directly regardless of it.
     // Required: false
     // Default: false
     useBooleanConfigValue = false,
@@ -59,13 +60,14 @@ val provider = FlagsmithProvider(
 )
 ```
 
-Unlike the Flagsmith OpenFeature provider for Python, there is no `useFlagsmithDefaults` option:
-the Flagsmith Kotlin client applies its `defaultFlags` internally when fetching environment flags,
-so the provider cannot distinguish default flags from remote ones. As a consequence, when no
-`targetingKey` is set the client swallows environment-flags fetch failures and returns its
-`defaultFlags` (empty unless configured), so the provider reports ready with zero flags and
-evaluations return the provided defaults with a `FLAG_NOT_FOUND` error rather than surfacing an
+When no `targetingKey` is set, the Flagsmith Kotlin client substitutes its configured
+`defaultFlags` (empty unless configured) on an environment-flags fetch failure instead of
+reporting the error. The provider therefore becomes ready with zero flags, and evaluations
+return the provided defaults with a `FLAG_NOT_FOUND` error rather than surfacing an
 initialization error.
+
+With a `targetingKey`, this substitution does not apply: a failed identity-flags fetch surfaces
+as an OpenFeature error status and the provider does not become ready.
 
 Register the provider and evaluate flags through the OpenFeature client:
 

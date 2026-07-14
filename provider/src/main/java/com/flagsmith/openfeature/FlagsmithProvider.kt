@@ -23,10 +23,8 @@ import kotlin.coroutines.resume
  * OpenFeature provider backed by the Flagsmith Kotlin Android client.
  *
  * Flags are fetched into memory on [initialize] and [onContextSet]; evaluations resolve
- * synchronously from that snapshot. The evaluation context maps to Flagsmith as follows:
- * the targeting key becomes the identity, and attributes become traits, with a nested
- * "traits" structure merged over flat attributes (nested wins). Without a targeting key,
- * environment flags are fetched.
+ * synchronously from that snapshot. See the project README for how the evaluation context
+ * maps to Flagsmith identities and traits.
  *
  * @param flagsmith the Flagsmith client used to fetch flags
  * @param useBooleanConfigValue evaluate booleans from the flag's remote config value
@@ -164,7 +162,7 @@ class FlagsmithProvider(
         return cached[key] ?: throw OpenFeatureError.FlagNotFoundError(key)
     }
 
-    // JsonParser is lenient and would accept non-JSON such as bare words; parse strictly instead.
+    // Gson's JsonParser is lenient and would accept non-JSON such as bare words.
     private fun parseJson(key: String, value: String): Value {
         val element = runCatching {
             val reader = JsonReader(StringReader(value))
@@ -175,7 +173,7 @@ class FlagsmithProvider(
         return element.toValue()
     }
 
-    // Gson parses all JSON numbers as Double; integral ones map back to Value.Integer.
+    // Gson parses all JSON numbers as Double.
     private fun JsonElement.toValue(): Value = when {
         isJsonNull -> Value.Null
         isJsonArray -> Value.List(asJsonArray.map { it.toValue() })
