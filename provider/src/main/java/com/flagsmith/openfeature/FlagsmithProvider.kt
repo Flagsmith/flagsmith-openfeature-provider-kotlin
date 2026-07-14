@@ -15,7 +15,10 @@ import dev.openfeature.kotlin.sdk.ProviderEvaluation
 import dev.openfeature.kotlin.sdk.ProviderMetadata
 import dev.openfeature.kotlin.sdk.Reason
 import dev.openfeature.kotlin.sdk.Value
+import dev.openfeature.kotlin.sdk.events.OpenFeatureProviderEvents
 import dev.openfeature.kotlin.sdk.exceptions.OpenFeatureError
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.suspendCancellableCoroutine
 import java.io.StringReader
 import kotlin.coroutines.resume
@@ -63,6 +66,24 @@ class FlagsmithProvider(
     override fun shutdown() {
         flags = null
     }
+
+    // flagsmith.flagUpdateFlow starts empty and the identity-with-traits path never updates it;
+    // ignore empty and unchanged emissions. OpenFeatureAPI collects this flow, driving the refresh.
+    override fun observe(): Flow<OpenFeatureProviderEvents> =
+        flagsmith.flagUpdateFlow.mapNotNull { updated ->
+            val current = flags
+            val updatedFlags = updated.associateBy { it.feature.name }
+            if (updated.isEmpty() || updatedFlags == current) {
+                return@mapNotNull null
+            }
+            val previous = current ?: emptyMap()
+            val changed = (previous.keys + updatedFlags.keys)
+                .filterTo(mutableSetOf()) { previous[it] != updatedFlags[it] }
+            flags = updatedFlags
+            OpenFeatureProviderEvents.ProviderConfigurationChanged(
+                OpenFeatureProviderEvents.EventDetails(flagsChanged = changed)
+            )
+        }
 
     override fun getBooleanEvaluation(
         key: String,

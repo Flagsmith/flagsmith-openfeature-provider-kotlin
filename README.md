@@ -88,6 +88,19 @@ val colour = client.getStringValue("banner-colour", "blue")
 Flags are fetched from Flagsmith when the provider is initialized and whenever the evaluation
 context changes; evaluations then resolve synchronously from the in-memory flags.
 
+When the Flagsmith client pushes new flags (for example through realtime updates, enabled with
+`enableRealtimeUpdates = true`), the provider refreshes its in-memory flags and surfaces a
+configuration-changed event carrying the names of the flags that changed. Subscribe through the
+OpenFeature SDK:
+
+```kotlin
+import dev.openfeature.kotlin.sdk.events.OpenFeatureProviderEvents.ProviderConfigurationChanged
+
+OpenFeatureAPI.observe<ProviderConfigurationChanged>().collect { event ->
+    val changed = event.eventDetails?.flagsChanged
+}
+```
+
 ### Evaluation Context
 
 The evaluation context maps to Flagsmith as follows:

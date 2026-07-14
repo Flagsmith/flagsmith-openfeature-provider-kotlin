@@ -9,8 +9,13 @@ import dev.openfeature.kotlin.sdk.ImmutableContext
 import dev.openfeature.kotlin.sdk.ImmutableStructure
 import dev.openfeature.kotlin.sdk.Reason
 import dev.openfeature.kotlin.sdk.Value
+import dev.openfeature.kotlin.sdk.events.OpenFeatureProviderEvents
 import dev.openfeature.kotlin.sdk.exceptions.OpenFeatureError
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
@@ -18,6 +23,7 @@ import org.junit.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.doAnswer
+import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.nullableArgumentCaptor
 import org.mockito.kotlin.verify
@@ -32,6 +38,14 @@ class FlagsmithProviderTests {
             @Suppress("UNCHECKED_CAST")
             (invocation.arguments[3] as (Result<List<Flag>>) -> Unit)(result)
         }
+    }
+
+    private fun flagsmithWithUpdates(updates: MutableStateFlow<List<Flag>>): Flagsmith = mock {
+        on { getFeatureFlags(anyOrNull(), anyOrNull(), any(), any()) } doAnswer { invocation ->
+            @Suppress("UNCHECKED_CAST")
+            (invocation.arguments[3] as (Result<List<Flag>>) -> Unit)(Result.success(updates.value))
+        }
+        on { flagUpdateFlow } doReturn updates
     }
 
     private fun initializedProvider(
@@ -660,6 +674,66 @@ class FlagsmithProviderTests {
     }
 
     @Test
+    fun `test_observe__genuine_flag_update__emits_configuration_changed_and_refreshes_snapshot`() = runTest {
+        // Given
+        val updates = MutableStateFlow(listOf(flag("feature", value = "old")))
+        val provider = FlagsmithProvider(flagsmithWithUpdates(updates))
+        provider.initialize(null)
+        val events = mutableListOf<OpenFeatureProviderEvents>()
+        val job = launch { provider.observe().collect { events.add(it) } }
+        runCurrent()
+
+        // When
+        updates.value = listOf(flag("feature", value = "new"), flag("added", value = "x"))
+        runCurrent()
+
+        // Then
+        assertEquals(1, events.size)
+        val details = events.single() as OpenFeatureProviderEvents.ProviderConfigurationChanged
+        assertEquals(setOf("feature", "added"), details.eventDetails?.flagsChanged)
+        assertEquals("new", provider.getStringEvaluation("feature", "default", null).value)
+        job.cancel()
+    }
+
+    @Test
+    fun `test_observe__empty_emission__emits_nothing_and_keeps_snapshot`() = runTest {
+        // Given
+        val updates = MutableStateFlow(listOf(flag("feature", value = "keep")))
+        val provider = FlagsmithProvider(flagsmithWithUpdates(updates))
+        provider.initialize(null)
+        val events = mutableListOf<OpenFeatureProviderEvents>()
+        val job = launch { provider.observe().collect { events.add(it) } }
+        runCurrent()
+
+        // When
+        updates.value = emptyList()
+        runCurrent()
+
+        // Then
+        assertTrue(events.isEmpty())
+        assertEquals("keep", provider.getStringEvaluation("feature", "default", null).value)
+        job.cancel()
+    }
+
+    @Test
+    fun `test_observe__emission_equal_to_snapshot__emits_nothing_and_keeps_snapshot`() = runTest {
+        // Given
+        val updates = MutableStateFlow(listOf(flag("feature", value = "keep")))
+        val provider = FlagsmithProvider(flagsmithWithUpdates(updates))
+        provider.initialize(null)
+        val events = mutableListOf<OpenFeatureProviderEvents>()
+        val job = launch { provider.observe().collect { events.add(it) } }
+
+        // When
+        runCurrent()
+
+        // Then
+        assertTrue(events.isEmpty())
+        assertEquals("keep", provider.getStringEvaluation("feature", "default", null).value)
+        job.cancel()
+    }
+
+    @Test
     fun `test_shutdown__initialized_provider__clears_flags`() {
         // Given
         val provider = initializedProvider(flag("feature"))
@@ -671,6 +745,15 @@ class FlagsmithProviderTests {
         assertThrows(OpenFeatureError.ProviderNotReadyError::class.java) {
             provider.getBooleanEvaluation("feature", false, null)
         }
+    }
+
+    @Test
+    fun `test_track__any_event__does_not_throw`() {
+        // Given
+        val provider = FlagsmithProvider(mock())
+
+        // When / Then
+        provider.track("event", null, null)
     }
 
     @Test
