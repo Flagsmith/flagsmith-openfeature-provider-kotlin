@@ -214,7 +214,7 @@ class FlagsmithProviderIntegrationTests {
           },
           {
             "feature": {"type": "STANDARD", "name": "double-flag", "id": 3},
-            "feature_state_value": 3.14,
+            "feature_state_value": "3.14",
             "enabled": true
           },
           {
