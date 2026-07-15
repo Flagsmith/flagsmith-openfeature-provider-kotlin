@@ -110,7 +110,12 @@ class FlagsmithProvider(
     ): ProviderEvaluation<Int> = resolve(key, "Integer") { value ->
         when (value) {
             is Int -> value
-            is Double -> value.asIntegral()
+            is Double -> value.asIntegral() ?: when {
+                value % 1.0 == 0.0 -> throw OpenFeatureError.TypeMismatchError(
+                    "Value for flag '$key' is a whole number outside the supported 32-bit integer range"
+                )
+                else -> null
+            }
             else -> null
         }
     }
@@ -225,6 +230,7 @@ class FlagsmithProvider(
         else -> Value.String(asJsonPrimitive.asString)
     }
 
+    // TODO: https://github.com/Flagsmith/flagsmith-openfeature-provider-kotlin/issues/2
     // The OpenFeature Kotlin SDK has no Long evaluation; integrals beyond Int range cannot narrow.
     private fun Double.asIntegral(): Int? =
         takeIf { it % 1.0 == 0.0 && it in Int.MIN_VALUE.toDouble()..Int.MAX_VALUE.toDouble() }?.toInt()

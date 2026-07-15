@@ -518,9 +518,13 @@ class FlagsmithProviderTests {
         val provider = initializedProvider(flag("feature", value = 9999999999.0))
 
         // When / Then
-        assertThrows(OpenFeatureError.TypeMismatchError::class.java) {
+        val error = assertThrows(OpenFeatureError.TypeMismatchError::class.java) {
             provider.getIntegerEvaluation("feature", 0, null)
         }
+        assertEquals(
+            "Value for flag 'feature' is a whole number outside the supported 32-bit integer range",
+            error.message
+        )
     }
 
     @Test
@@ -529,9 +533,10 @@ class FlagsmithProviderTests {
         val provider = initializedProvider(flag("feature", value = 4.5))
 
         // When / Then
-        assertThrows(OpenFeatureError.TypeMismatchError::class.java) {
+        val error = assertThrows(OpenFeatureError.TypeMismatchError::class.java) {
             provider.getIntegerEvaluation("feature", 0, null)
         }
+        assertEquals("Value for flag 'feature' is not of type 'Integer'", error.message)
     }
 
     @Test
