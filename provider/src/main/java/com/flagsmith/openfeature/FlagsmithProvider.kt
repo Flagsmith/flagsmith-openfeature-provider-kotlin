@@ -111,22 +111,16 @@ class FlagsmithProvider(
         when (value) {
             is Int -> value
             is Double -> value.narrowToInt(key)
-            is String -> value.toDoubleOrNull()?.narrowToInt(key)
             else -> null
         }
     }
 
+    // Flagsmith has no float type; decimal values are stored and returned as strings.
     override fun getDoubleEvaluation(
         key: String,
         defaultValue: Double,
         context: EvaluationContext?
-    ): ProviderEvaluation<Double> = resolve(key, "Double") { value ->
-        when (value) {
-            is Double -> value
-            is String -> value.toDoubleOrNull()
-            else -> null
-        }
-    }
+    ): ProviderEvaluation<Double> = resolve(key, "Double") { (it as? Double) ?: (it as? String)?.toDoubleOrNull() }
 
     override fun getObjectEvaluation(
         key: String,

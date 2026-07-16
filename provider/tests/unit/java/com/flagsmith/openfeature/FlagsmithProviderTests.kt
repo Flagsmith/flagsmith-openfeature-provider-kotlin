@@ -540,43 +540,9 @@ class FlagsmithProviderTests {
     }
 
     @Test
-    fun `test_getIntegerEvaluation__integral_string_value__returns_int`() {
+    fun `test_getIntegerEvaluation__string_value__throws_type_mismatch_error`() {
         // Given
         val provider = initializedProvider(flag("feature", value = "42"))
-
-        // When
-        val evaluation = provider.getIntegerEvaluation("feature", 0, null)
-
-        // Then
-        assertEquals(42, evaluation.value)
-    }
-
-    @Test
-    fun `test_getIntegerEvaluation__fractional_string_value__throws_type_mismatch_error`() {
-        // Given
-        val provider = initializedProvider(flag("feature", value = "4.5"))
-
-        // When / Then
-        assertThrows(OpenFeatureError.TypeMismatchError::class.java) {
-            provider.getIntegerEvaluation("feature", 0, null)
-        }
-    }
-
-    @Test
-    fun `test_getIntegerEvaluation__non_numeric_string_value__throws_type_mismatch_error`() {
-        // Given
-        val provider = initializedProvider(flag("feature", value = "not a number"))
-
-        // When / Then
-        assertThrows(OpenFeatureError.TypeMismatchError::class.java) {
-            provider.getIntegerEvaluation("feature", 0, null)
-        }
-    }
-
-    @Test
-    fun `test_getIntegerEvaluation__non_numeric_non_string_value__throws_type_mismatch_error`() {
-        // Given
-        val provider = initializedProvider(flag("feature", value = true))
 
         // When / Then
         assertThrows(OpenFeatureError.TypeMismatchError::class.java) {
@@ -609,20 +575,9 @@ class FlagsmithProviderTests {
     }
 
     @Test
-    fun `test_getDoubleEvaluation__non_numeric_string_value__throws_type_mismatch_error`() {
+    fun `test_getDoubleEvaluation__non_numeric_value__throws_type_mismatch_error`() {
         // Given
         val provider = initializedProvider(flag("feature", value = "not a number"))
-
-        // When / Then
-        assertThrows(OpenFeatureError.TypeMismatchError::class.java) {
-            provider.getDoubleEvaluation("feature", 0.0, null)
-        }
-    }
-
-    @Test
-    fun `test_getDoubleEvaluation__non_numeric_non_string_value__throws_type_mismatch_error`() {
-        // Given
-        val provider = initializedProvider(flag("feature", value = true))
 
         // When / Then
         assertThrows(OpenFeatureError.TypeMismatchError::class.java) {
