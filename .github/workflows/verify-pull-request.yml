@@ -1,0 +1,34 @@
+name: Verify pull request to main
+
+on:
+  pull_request:
+    branches:
+      - "main"
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+      - name: Preconfigure gradle
+        uses: ./.github/actions/prepare-gradle
+
+      - name: Run tests
+        run: ./gradlew check
+
+      - name: Verify code coverage level
+        run: ./gradlew koverVerify
+
+  build:
+    name: Test build process
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+      - name: Preconfigure gradle
+        uses: ./.github/actions/prepare-gradle
+
+      - name: Test Build Process
+        run: ./gradlew publishToMavenLocal

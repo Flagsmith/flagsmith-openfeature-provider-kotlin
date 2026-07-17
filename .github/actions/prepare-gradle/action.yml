@@ -1,0 +1,23 @@
+name: "Configure gradle"
+description: "Set up the JDK and Gradle used by the build and test jobs"
+
+inputs:
+  java-version:
+    description: "Java Version"
+    default: "17"
+  distribution:
+    description: "Java Distribution"
+    default: "temurin"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Setup JDK ${{ inputs.java-version }}
+      uses: actions/setup-java@v5
+      with:
+        java-version: ${{ inputs.java-version }}
+        distribution: ${{ inputs.distribution }}
+        cache: gradle
+    - name: Grant execute permission for gradlew
+      shell: bash
+      run: chmod +x gradlew
