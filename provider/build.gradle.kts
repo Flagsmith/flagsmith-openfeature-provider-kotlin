@@ -57,7 +57,7 @@ kotlin {
 
 dependencies {
     api("dev.openfeature:kotlin-sdk:0.8.0")
-    api("com.flagsmith:flagsmith-kotlin-android-client:1.9.0")
+    api("com.flagsmith:flagsmith-kotlin-android-client:1.10.0")
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
     implementation("com.google.code.gson:gson:2.10")

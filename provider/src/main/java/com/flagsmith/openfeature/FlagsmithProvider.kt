@@ -185,10 +185,15 @@ class FlagsmithProvider(
         return ProviderEvaluation(value, reason = reasonFor(flag), metadata = metadataFor(flag))
     }
 
-    private fun reasonFor(flag: Flag): String = when {
-        !flag.enabled && returnValueForDisabledFlags -> Reason.DISABLED.name
-        fetchedForIdentity -> Reason.TARGETING_MATCH.name
-        else -> Reason.STATIC.name
+    private fun reasonFor(flag: Flag): String {
+        val reason = flag.reason
+        return when {
+            !flag.enabled && returnValueForDisabledFlags -> Reason.DISABLED.name
+            reason == null -> if (fetchedForIdentity) Reason.TARGETING_MATCH.name else Reason.STATIC.name
+            // Flagsmith's DEFAULT is the environment default; OpenFeature keeps DEFAULT for the caller's default value.
+            reason.substringBefore(";").trim() == "DEFAULT" -> Reason.STATIC.name
+            else -> reason
+        }
     }
 
     // The OpenFeature Kotlin SDK metadata has no Long type; the Long feature id is kept as a string.

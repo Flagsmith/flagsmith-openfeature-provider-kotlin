@@ -30,8 +30,13 @@ import org.mockito.kotlin.verify
 
 class FlagsmithProviderTests {
 
-    private fun flag(name: String, value: Any? = null, enabled: Boolean = true, id: Long = 0L) =
-        Flag(feature = Feature(name = name, id = id), featureStateValue = value, enabled = enabled)
+    private fun flag(
+        name: String,
+        value: Any? = null,
+        enabled: Boolean = true,
+        id: Long = 0L,
+        reason: String? = null
+    ) = Flag(feature = Feature(name = name, id = id), featureStateValue = value, enabled = enabled, reason = reason)
 
     private fun flagsmithReturning(result: Result<List<Flag>>): Flagsmith = mock {
         on { getFeatureFlags(anyOrNull(), anyOrNull(), any(), any()) } doAnswer { invocation ->
@@ -417,6 +422,59 @@ class FlagsmithProviderTests {
 
         // Then
         assertEquals(Reason.TARGETING_MATCH.name, evaluation.reason)
+    }
+
+    @Test
+    fun `test_getStringEvaluation__flagsmith_reason__passes_reason_through`() {
+        // Given
+        val provider = initializedProvider(
+            flag("feature", value = "some value", reason = "TARGETING_MATCH; segment=beta")
+        )
+
+        // When
+        val evaluation = provider.getStringEvaluation("feature", "default", null)
+
+        // Then
+        assertEquals("TARGETING_MATCH; segment=beta", evaluation.reason)
+    }
+
+    @Test
+    fun `test_getStringEvaluation__flagsmith_split_reason__passes_reason_through`() {
+        // Given
+        val provider = initializedProvider(flag("feature", value = "some value", reason = "SPLIT; weight=30"))
+
+        // When
+        val evaluation = provider.getStringEvaluation("feature", "default", null)
+
+        // Then
+        assertEquals("SPLIT; weight=30", evaluation.reason)
+    }
+
+    @Test
+    fun `test_getStringEvaluation__flagsmith_default_reason__maps_to_static`() {
+        // Given
+        val provider = initializedProvider(flag("feature", value = "some value", reason = "DEFAULT"))
+
+        // When
+        val evaluation = provider.getStringEvaluation("feature", "default", null)
+
+        // Then
+        assertEquals(Reason.STATIC.name, evaluation.reason)
+    }
+
+    @Test
+    fun `test_getStringEvaluation__flagsmith_reason_on_disabled_flag__disabled_wins`() {
+        // Given
+        val provider = initializedProvider(
+            flag("feature", value = "some value", enabled = false, reason = "IDENTITY_OVERRIDE"),
+            returnValueForDisabledFlags = true
+        )
+
+        // When
+        val evaluation = provider.getStringEvaluation("feature", "default", null)
+
+        // Then
+        assertEquals(Reason.DISABLED.name, evaluation.reason)
     }
 
     @Test
